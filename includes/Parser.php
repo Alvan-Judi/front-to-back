@@ -7,15 +7,16 @@
 class Parser {
 
     var $html = '';
-    var $selector = 'ftd-field';
-    var $sub_field_selector = 'ftd-sub';
+    var $selector = 'ftb-field';
+    var $sub_field_selector = 'ftb-sub';
     var $field_prefix = 'field_';
     var $fields = array();
     var $already_parsed = array();
+
     var $wordpress_fields = array(
-        'ftd-title',
-        'ftd-content',
-        'ftd-excerpt'
+        'ftb-title' => 'post.title',
+        'ftb-content' => 'post.content',
+        'ftb-excerpt' => 'post.excerpt'
     );
 
     public function __construct() {
@@ -35,16 +36,12 @@ class Parser {
         $this->crawl_elements($this->selector);
 
         // Convert wordpress fields
-        $this->convert_wordpress_fields();
+        $this->parse_wordpress_fields();
         
         // Once the crawl is done, save the html in a var and return the value
         $doc_html = $this->html->save();
         $this->html->clear();
         unset($this->html);
-
-        dump($doc_html);
-        die();
-
         // Return fields
         return array(
             'html' => $doc_html,
@@ -55,10 +52,20 @@ class Parser {
     /**
      * Crawl elements
      */
-    public function crawl_elements($selector, $parent_field = false) {
+    public function crawl_elements($selector, $parent_field = false, $element = false) {
+
+        if($element) {
+            $query = $element->find('['.$selector.']');
+        }else {
+            $query = $this->html->find('['.$selector.']');
+        }
+
+        if(empty($query)) {
+            return false;
+        }
 
         // Start the crawl to get fields
-        foreach($this->html->find('['.$selector.']') as &$element) {
+        foreach($this->html->find('['.$selector.']') as $element) {
 
             // Get $field settings
             $field = $this->get_field_final_settings($element);
@@ -68,47 +75,86 @@ class Parser {
                 $field['parent'] = $parent_field['key'];
             }
 
-            // Remove the selector attribute
-            $element->removeAttribute($selector);
-
-            // If element has al
+            // If element has already been parsed, do not parse it again
             if(in_array($element->tag_start, $this->already_parsed)) {
                 continue;
             }
             $this->already_parsed[] = $element->tag_start;
 
+            // Add this fields to $field
             $this->fields[] = $field;
 
-            // Condition that handle all fields type
-            if($field['type'] === 'repeater') {
+            // Recursivly get sub fields
+            $this->crawl_elements($this->sub_field_selector, $field, $element);
+            
+            // Convert to twig
+            $this->convert_to_timber_twig($field, $element, $parent_field, $selector);
+        }
+    }
+    
+    /**
+     * Convert 
+     */
+    public function parse_wordpress_fields(){
+        foreach($this->wordpress_fields as $selector => $twig_variable) {
 
-                // Recursivly get sub fields
-                $this->crawl_elements($this->sub_field_selector, $field);
-                
-                // Get the outer tag of the repeater div to surround it with twig "for" loop
-                $div_to_repeat = $element->outertext();
+            $wordpress_field = $this->html->find('['.$selector.']');
 
-                // Set the item name based on the parent name and trim "s" so the item is singular
-                $item = rtrim($field['name'], "s");
+            if(!$wordpress_field) {
+                return false;
+            }
 
-                if($parent_field){ 
-                    $parent_item = rtrim($parent_field['name'], "s");
-                    $element->outertext = "{% for ".$item." in ".$parent_item.".".$field['name']." %}
+            // Get only first result if a mistake has been done
+            $wordpress_field = reset($wordpress_field);
+
+            // Convert to TWIG
+            $wordpress_field->innertext = "{{ ".$twig_variable." }}";
+            $wordpress_field->removeAttribute($selector);
+        }
+    }
+
+    /**
+     * Convert to twig
+     */
+    public function convert_to_timber_twig($field, $element, $parent_field, $selector) {
+        
+        // Remove the selector attribute
+        $element->removeAttribute($selector);
+
+        // Condition that handle all fields type
+        if($field['type'] === 'repeater') {
+
+            // Get the outer tag of the repeater div to surround it with twig "for" loop
+            $div_to_repeat = $element->outertext();
+
+            // Set the item name based on the parent name and trim "s" so the item is singular
+            $item = rtrim($field['name'], "s");
+
+            if($parent_field){ 
+                $parent_item = rtrim($parent_field['name'], "s");
+                $element->outertext = "{% for ".$item." in ".$parent_item.".".$field['name']." %}
+                ".$div_to_repeat."
+            {% endfor %}";
+            }else {
+                $element->outertext = "{% for ".$item." in post.meta('".$field['name']."') %}
                     ".$div_to_repeat."
                 {% endfor %}";
-                }else {
-                    $element->outertext = "{% for ".$item." in post.meta('".$field['name']."') %}
-                        ".$div_to_repeat."
-                    {% endfor %}";
-                }
+            }
+
+        }else if($field['type'] === 'image') {
+            if($parent_field){
+                $item = rtrim($parent_field['name'], "s");
+                $element->setAttribute('src', "{{ Image(".$item.".".$field['name'].").src }}");
             }else {
-                // If simple field
-                if($parent_field){
-                    $item = rtrim($parent_field['name'], "s");
-                    $element->innertext = "{{ ".$item.".".$field['name']." }}";
-                }else {
-                    $element->innertext = "{{ post.meta('".$field['name']."') }}";
-                }
+                $element->setAttribute('src', "{{ Image(post.meta('".$field['name']."')).src }}");
+            }     
+        }else {
+            // If simple field
+            if($parent_field){
+                $item = rtrim($parent_field['name'], "s");
+                $element->innertext = "{{ ".$item.".".$field['name']." }}";
+            }else {
+                $element->innertext = "{{ post.meta('".$field['name']."') }}";
             }
         }
     }

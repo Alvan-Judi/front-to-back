@@ -1,8 +1,8 @@
 <?php
 
 /**
- * Plugin Name: Front to Dev
- * Description: Parse HTML content to create ACF Fields and Timber and Twig.
+ * Plugin Name: Front to Back
+ * Description: Parse HTML content to create ACF Fields + Timber and Twig files.
  * Version: 1.0
  * Author: Acti
  * Author URI: https://www.acti.fr
@@ -11,7 +11,7 @@
 
 if( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
-class Front_to_Dev {
+class Front_to_Back {
 
     /**
      * Settings
@@ -30,27 +30,27 @@ class Front_to_Dev {
     public function __construct() {
 
         // Add admin menu page
-        add_action( 'admin_menu', array($this, 'register_ftd_menu_page' ));
+        add_action( 'admin_menu', array($this, 'register_ftb_menu_page' ));
     }
 
     /**
      * Register a custom menu page.
      */
-    public function register_ftd_menu_page() {
+    public function register_ftb_menu_page() {
         add_submenu_page(
             'tools.php',
-            __('Front to Dev', 'ftd'),
-            'Front to Dev',
+            __('Front to Back', 'ftb'),
+            'Front to Back',
             'manage_options',
             'front-to-dev',
-            array($this, 'ftd_menu_page_content')
+            array($this, 'ftb_menu_page_content')
         );
     }
 
     /**
      * Admin page content
      */
-    public function ftd_menu_page_content(){ ?>
+    public function ftb_menu_page_content(){ ?>
         <?php
             if(!empty($_POST['page_to_parse'])) {
                 if(!file_exists($_POST['page_to_parse'])) {
@@ -62,7 +62,7 @@ class Front_to_Dev {
                 if($parse) : ?>
                     <div class="notice notice-success" style="margin: 10px 0 20px 2px;">
                         <p>
-                            <?php _e('Parsing done', 'ftd'); ?>
+                            <?php _e('Parsing done', 'ftb'); ?>
                         </p>
                     </div>
                 <?php endif;
@@ -79,21 +79,21 @@ class Front_to_Dev {
 
             }
         ?>
-        <h1><?php _e('Front to Dev', 'ftd'); ?></h1>
+        <h1><?php _e('Front to Back', 'ftb'); ?></h1>
 
         <div class="postbox acf-postbox">
             <div class="inside">
-                <h2><?php _e('Parsing', 'ftd'); ?></h2>
+                <h2><?php _e('Parsing', 'ftb'); ?></h2>
 
                 <p>
-                    <?php _e('Select the html to parse','ftd');?>
+                    <?php _e('Select the html to parse','ftb');?>
                 </p>
 
                 <?php
                     $integration_folder = WP_CONTENT_DIR.'/integration';
 
                     if(!is_dir($integration_folder)) {
-                        echo '<span style="color: red">'.__('The "integration" folder does not exists or is not at the right place. It should be at the root of the application.', 'ftd').'</span>';
+                        echo '<span style="color: red">'.__('The "integration" folder does not exists or is not at the right place. It should be at the root of the application.', 'ftb').'</span>';
                         return;
                     }else {
                         $files = array_diff(scandir($integration_folder), array('.', '..'));
@@ -109,7 +109,7 @@ class Front_to_Dev {
                         <?php endforeach; ?>
                     </select>
                     <button class="button button-primary">
-                        <?php _e('Start Parsing', 'ftd'); ?>
+                        <?php _e('Start Parsing', 'ftb'); ?>
                     </button>
                 </form>
             </div>
@@ -137,7 +137,7 @@ class Front_to_Dev {
         $parser_data = $this->parser->get_fields($page);
 
         if(empty($parser_data['fields'])) {
-            $this->set_error(__('No fields in the html file', 'ftd'));
+            $this->set_error(__('No fields in the html file', 'ftb'));
             return;
         }
 
@@ -273,7 +273,7 @@ class Front_to_Dev {
         }
 
         if(file_exists($php_page)) {
-            $this->set_error(__('Page already exists. Remove php and twig files first.', 'ftd'));
+            $this->set_error(__('Page already exists. Remove php and twig files first.', 'ftb'));
             return false;
         }
 
@@ -324,4 +324,4 @@ Timber::render(\''.$this->get_page_basename($page).'.twig\', $context);
 
 }
 
-$ftd = new Front_to_Dev();
+$ftb = new Front_to_Back();

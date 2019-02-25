@@ -42,11 +42,7 @@ class Parser {
         $doc_html = $this->html->save();
         $this->html->clear();
         unset($this->html);
-
-        dump($this->fields);
-        dump($doc_html);
-
-        die();
+        
         // Return fields
         return array(
             'html' => $doc_html,

@@ -42,7 +42,7 @@ class Parser {
         $doc_html = $this->html->save();
         $this->html->clear();
         unset($this->html);
-        
+
         // Return fields
         return array(
             'html' => $doc_html,
@@ -60,8 +60,6 @@ class Parser {
         }else {
             $query = $this->html->find('['.$selector.']');
         }
-
-        dump($query);
 
         if(empty($query)) {
             return false;

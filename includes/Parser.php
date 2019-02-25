@@ -42,6 +42,11 @@ class Parser {
         $doc_html = $this->html->save();
         $this->html->clear();
         unset($this->html);
+
+        dump($this->fields);
+        dump($doc_html);
+
+        die();
         // Return fields
         return array(
             'html' => $doc_html,
@@ -52,13 +57,15 @@ class Parser {
     /**
      * Crawl elements
      */
-    public function crawl_elements($selector, $parent_field = false, $element = false) {
+    public function crawl_elements($selector, $parent_field = false, $parent_element = false) {
 
-        if($element) {
-            $query = $element->find('['.$selector.']');
+        if($parent_element) {
+            $query = $parent_element->find('['.$selector.']');
         }else {
             $query = $this->html->find('['.$selector.']');
         }
+
+        dump($query);
 
         if(empty($query)) {
             return false;
@@ -84,8 +91,11 @@ class Parser {
             // Add this fields to $field
             $this->fields[] = $field;
 
-            // Recursivly get sub fields
-            $this->crawl_elements($this->sub_field_selector, $field, $element);
+            // Recursivly get sub fields, except img because of a bug
+            // While the parser  currently find children of img tag while it shouldn't.
+            if($field->tag !== 'img'){
+                $this->crawl_elements($this->sub_field_selector, $field, $element);
+            } 
             
             // Convert to twig
             $this->convert_to_timber_twig($field, $element, $parent_field, $selector);

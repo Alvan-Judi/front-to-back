@@ -9,6 +9,7 @@ class Parser {
     var $html = '';
     var $selector = 'ftb-field';
     var $sub_field_selector = 'ftb-sub';
+    var $link_text_attr = 'ftb-url-text';
     var $field_prefix = 'field_';
     var $fields = array();
     var $already_parsed = array();
@@ -119,6 +120,7 @@ class Parser {
 
     /**
      * Convert to twig
+     * TODO: Refactoring everything
      */
     public function convert_to_timber_twig($field, $element, $parent_field, $selector) {
         
@@ -152,6 +154,24 @@ class Parser {
             }else {
                 $element->setAttribute('src', "{{ Image(post.meta('".$field['name']."')).src }}");
             }     
+        }else if($field['type'] === 'url') {
+            if($parent_field){
+                $item = rtrim($parent_field['name'], "s");
+                $element->setAttribute('href', "{{ ".$item.".".$field['name']." }}");
+            }else {
+                $element->setAttribute('href', "{{ post.meta('".$field['name']."')");
+            }     
+
+            // URL text attribute
+            if(isset($element->attr[$this->link_text_attr])) {
+                if($parent_field){
+                    $item = rtrim($parent_field['name'], "s");
+                    $element->innertext = "{{ ".$item.".".$field['name']." }}";
+                }else {
+                    $element->innertext = "{{ post.meta('".$field['name']."') }}";
+                }
+                $element->removeAttribute($this->link_text_attr);
+            }
         }else {
             // If simple field
             if($parent_field){
@@ -166,9 +186,11 @@ class Parser {
     /**
      * Get field name and type
      */
-    public function get_field_settings($element, $sub_field = false) {
+    public function get_field_settings($element, $selector = false) {
 
-        if(isset($element->attr[$this->selector])) {
+        if(isset($selector)) {
+            $selector = $selector;
+        } else if(isset($element->attr[$this->selector])) {
             $selector = $this->selector;
         }else if(isset($element->attr[$this->sub_field_selector])) {
             $selector = $this->sub_field_selector;
